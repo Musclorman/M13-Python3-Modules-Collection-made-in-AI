@@ -1,0 +1,61 @@
+"""
+Setup configuration for variableplus - Python Package Collection
+Contains: generic_tree, MenuMaker, Multidimention_table, and multidimention_paint
+"""
+
+from setuptools import setup, find_packages
+import os
+
+# Read the contents of README file
+this_directory = os.path.abspath(os.path.dirname(__file__))
+with open(os.path.join(this_directory, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
+
+setup(
+    name='variableplus',
+    version='1.0.0',
+    author='Musclor13',
+    author_email=None,
+    description=('Complete Python package collection with data structures, '
+                 'interactive menus, arrays, and geometric operations'),
+    long_description=long_description,
+    long_description_content_type='text/markdown',
+    url='https://github.com/Musclor13/variableplus',
+    project_urls={
+        'Bug Tracker': 'https://github.com/Musclor13/variableplus/issues',
+        'Documentation': 'https://github.com/Musclor13/variableplus/wiki',
+        'Source Code': 'https://github.com/Musclor13/variableplus',
+    },
+    packages=find_packages(include=[
+        'generic_tree', 'generic_tree.*',
+        'MenuMaker', 'MenuMaker.*',
+        'Multidimention_table', 'Multidimention_table.*'
+    ]),
+    classifiers=[
+        'Development Status :: 5 - Production/Stable',
+        'Intended Audience :: Developers',
+        'Topic :: Software Development :: Libraries :: Python Modules',
+        'Topic :: Utilities',
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
+        'Operating System :: OS Independent',
+        'Natural Language :: English',
+        'Natural Language :: French',
+        'Natural Language :: Spanish',
+        'Natural Language :: German',
+        'Natural Language :: Italian',
+        'Natural Language :: Chinese (Simplified)',
+    ],
+    python_requires='>=3.7',
+    keywords='tree data-structure n-ary hierarchy menu interface '
+             'multidimensional array geometry shapes',
+    include_package_data=True,
+    zip_safe=False,
+)

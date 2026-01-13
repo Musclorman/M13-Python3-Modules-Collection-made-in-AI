@@ -1,0 +1,556 @@
+"""
+Main MultidimensionalPaint class for drawing and managing shapes and points.
+
+This module contains the main interface for the MultidimensionalPaint system.
+"""
+
+from typing import List, Tuple, Optional, Dict, Any
+try:
+    from .points import Point, PointSet
+    from .shapes import (
+        Shape, Line, Circle, Rectangle, Square, Ellipse, Arc, ClosedShape
+    )
+    from .selection import SelectionEngine
+    from .utils import bounding_box, distance
+except ImportError:
+    from points import Point, PointSet
+    from shapes import (
+        Shape, Line, Circle, Rectangle, Square, Ellipse, Arc, ClosedShape
+    )
+    from selection import SelectionEngine
+    from utils import bounding_box, distance
+
+
+class MultidimensionalPaint:
+    """
+    Main class for creating and managing multidimensional point
+    selections and geometric drawings.
+
+    Attributes:
+        points (PointSet): Collection of points
+        shapes (List[Shape]): Collection of drawn shapes
+        selection_engine (SelectionEngine): Point selection engine
+    """
+
+    def __init__(self):
+        """Initialize the MultidimensionalPaint instance."""
+        self.points = PointSet()
+        self.shapes: List[Shape] = []
+        self.selection_engine = SelectionEngine()
+        self.metadata: Dict[str, Any] = {}
+
+    # ========== Point Management ==========
+
+    def add_point(self, *coords, label: Optional[str] = None) -> Point:
+        """
+        Add a point to the canvas.
+
+        Args:
+            *coords: Coordinates of the point (1D, 2D, 3D, ...)
+            label: Optional label for the point
+
+        Returns:
+            Point: The created point
+        """
+        point = Point(*coords, label=label)
+        self.points.add_point(point)
+        return point
+
+    def add_points_from_list(self, points_list: List[Tuple],
+                             labels: Optional[List[str]] = None) -> None:
+        """
+        Add multiple points at once.
+
+        Args:
+            points_list: List of coordinate tuples
+            labels: Optional list of labels
+        """
+        for i, coords in enumerate(points_list):
+            label = labels[i] if labels and i < len(labels) else None
+            self.add_point(*coords, label=label)
+
+    def get_point(self, index: int) -> Point:
+        """
+        Get a point by index.
+
+        Args:
+            index: Point index
+
+        Returns:
+            Point: The point at the index
+        """
+        return self.points.get_point(index)
+
+    def get_point_by_label(self, label: str) -> Optional[Point]:
+        """
+        Get a point by label.
+
+        Args:
+            label: Point label
+
+        Returns:
+            Optional[Point]: The point or None
+        """
+        return self.points.get_by_label(label)
+
+    def remove_point(self, point: Point) -> bool:
+        """
+        Remove a point from the canvas.
+
+        Args:
+            point: Point to remove
+
+        Returns:
+            bool: True if removed successfully
+        """
+        return self.points.remove_point(point)
+
+    def get_all_points(self) -> List[Tuple]:
+        """
+        Get all point coordinates.
+
+        Returns:
+            List[Tuple]: List of coordinate tuples
+        """
+        return [p.coords for p in self.points]
+
+    def get_point_count(self) -> int:
+        """Get number of points on canvas."""
+        return self.points.count
+
+    # ========== Shape Drawing ==========
+
+    def draw_line(self, start: Tuple, end: Tuple, num_points: int = 100,
+                  **kwargs) -> Line:
+        """
+        Draw a line from start to end.
+
+        Args:
+            start: Start point coordinates
+            end: End point coordinates
+            num_points: Number of interpolation points
+            **kwargs: Additional shape arguments
+
+        Returns:
+            Line: The created line shape
+        """
+        line = Line(start, end, num_points=num_points, **kwargs)
+        self.shapes.append(line)
+        return line
+
+    def draw_circle(self, center: Tuple, radius: float, num_points: int = 360,
+                    **kwargs) -> Circle:
+        """
+        Draw a circle.
+
+        Args:
+            center: Center coordinates
+            radius: Circle radius
+            num_points: Number of points on circumference
+            **kwargs: Additional shape arguments
+
+        Returns:
+            Circle: The created circle shape
+        """
+        circle = Circle(center, radius, num_points=num_points, **kwargs)
+        self.shapes.append(circle)
+        return circle
+
+    def draw_rectangle(self, corner1: Tuple, corner2: Tuple,
+                       num_points: int = 100, **kwargs) -> Rectangle:
+        """
+        Draw a rectangle.
+
+        Args:
+            corner1: First corner coordinates
+            corner2: Opposite corner coordinates
+            num_points: Number of edge points
+            **kwargs: Additional shape arguments
+
+        Returns:
+            Rectangle: The created rectangle shape
+        """
+        rect = Rectangle(corner1, corner2, num_points=num_points, **kwargs)
+        self.shapes.append(rect)
+        return rect
+
+    def draw_square(self, center: Tuple, side_length: float,
+                    **kwargs) -> Square:
+        """
+        Draw a square.
+
+        Args:
+            center: Center coordinates
+            side_length: Length of each side
+            **kwargs: Additional shape arguments
+
+        Returns:
+            Square: The created square shape
+        """
+        square = Square(center, side_length, **kwargs)
+        self.shapes.append(square)
+        return square
+
+    def draw_ellipse(self, center: Tuple, semi_major: float,
+                     semi_minor: float, rotation: float = 0,
+                     num_points: int = 360, **kwargs) -> Ellipse:
+        """
+        Draw an ellipse.
+
+        Args:
+            center: Center coordinates
+            semi_major: Semi-major axis length
+            semi_minor: Semi-minor axis length
+            rotation: Rotation angle in radians
+            num_points: Number of points on ellipse
+            **kwargs: Additional shape arguments
+
+        Returns:
+            Ellipse: The created ellipse shape
+        """
+        ellipse = Ellipse(center, semi_major, semi_minor,
+                         rotation=rotation, num_points=num_points, **kwargs)
+        self.shapes.append(ellipse)
+        return ellipse
+
+    def draw_arc(self, center: Tuple, radius: float, start_angle: float,
+                 end_angle: float, num_points: int = 100,
+                 **kwargs) -> Arc:
+        """
+        Draw a circular arc.
+
+        Args:
+            center: Center coordinates
+            radius: Arc radius
+            start_angle: Starting angle in radians
+            end_angle: Ending angle in radians
+            num_points: Number of points on arc
+            **kwargs: Additional shape arguments
+
+        Returns:
+            Arc: The created arc shape
+        """
+        arc = Arc(center, radius, start_angle, end_angle,
+                 num_points=num_points, **kwargs)
+        self.shapes.append(arc)
+        return arc
+
+    def draw_closed_shape(self, vertices: List[Tuple], num_points: int = 100,
+                          **kwargs) -> ClosedShape:
+        """
+        Draw a closed polygon shape.
+
+        Args:
+            vertices: List of vertex coordinates
+            num_points: Number of edge points
+            **kwargs: Additional shape arguments
+
+        Returns:
+            ClosedShape: The created closed shape
+        """
+        shape = ClosedShape(vertices, num_points=num_points, **kwargs)
+        self.shapes.append(shape)
+        return shape
+
+    def get_shapes(self) -> List[Shape]:
+        """Get all drawn shapes."""
+        return self.shapes
+
+    def get_shape_count(self) -> int:
+        """Get number of shapes."""
+        return len(self.shapes)
+
+    def remove_shape(self, shape: Shape) -> bool:
+        """
+        Remove a shape.
+
+        Args:
+            shape: Shape to remove
+
+        Returns:
+            bool: True if removed successfully
+        """
+        try:
+            self.shapes.remove(shape)
+            return True
+        except ValueError:
+            return False
+
+    def clear_shapes(self) -> None:
+        """Remove all shapes."""
+        self.shapes.clear()
+
+    # ========== Point Selection ==========
+
+    def select_single_point(self, target: Tuple,
+                           tolerance: float = 0.1) -> List[Tuple]:
+        """
+        Select a single point.
+
+        Args:
+            target: Target coordinates
+            tolerance: Selection tolerance
+
+        Returns:
+            List[Tuple]: Selected point coordinates
+        """
+        return self.selection_engine.select_single_point(
+            self.points, target, tolerance
+        )
+
+    def select_line(self, start: Tuple, end: Tuple,
+                   tolerance: float = 0.1) -> List[Tuple]:
+        """
+        Select points along a line.
+
+        Args:
+            start: Line start coordinates
+            end: Line end coordinates
+            tolerance: Selection tolerance
+
+        Returns:
+            List[Tuple]: Selected point coordinates
+        """
+        return self.selection_engine.select_line(
+            self.points, start, end, tolerance
+        )
+
+    def select_within_shape(self, shape: Shape) -> List[Tuple]:
+        """
+        Select points within a shape.
+
+        Args:
+            shape: Shape to select within
+
+        Returns:
+            List[Tuple]: Selected point coordinates
+        """
+        return self.selection_engine.select_within_shape(self.points, shape)
+
+    def select_within_region(self, corner1: Tuple,
+                            corner2: Tuple) -> List[Tuple]:
+        """
+        Select points within a rectangular region.
+
+        Args:
+            corner1: First corner coordinates
+            corner2: Opposite corner coordinates
+
+        Returns:
+            List[Tuple]: Selected point coordinates
+        """
+        bbox = bounding_box(corner1, corner2)
+        return self.selection_engine.select_within_bounding_box(
+            self.points, bbox
+        )
+
+    def select_by_range(self, dimension: int, min_val: float,
+                       max_val: float) -> List[Tuple]:
+        """
+        Select points within a range in a dimension.
+
+        Args:
+            dimension: Dimension index
+            min_val: Minimum value
+            max_val: Maximum value
+
+        Returns:
+            List[Tuple]: Selected point coordinates
+        """
+        return self.selection_engine.select_by_range(
+            self.points, dimension, min_val, max_val
+        )
+
+    def select_by_label(self, label: str) -> List[Tuple]:
+        """
+        Select points by label.
+
+        Args:
+            label: Point label
+
+        Returns:
+            List[Tuple]: Selected point coordinates
+        """
+        return self.selection_engine.select_by_label(self.points, label)
+
+    def select_nearest(self, target: Tuple, count: int = 1) -> List[Tuple]:
+        """
+        Select nearest points to target.
+
+        Args:
+            target: Target coordinates
+            count: Number of points to select
+
+        Returns:
+            List[Tuple]: Selected point coordinates
+        """
+        return self.selection_engine.select_nearest(
+            self.points, target, count
+        )
+
+    def select_farthest(self, target: Tuple, count: int = 1) -> List[Tuple]:
+        """
+        Select farthest points from target.
+
+        Args:
+            target: Target coordinates
+            count: Number of points to select
+
+        Returns:
+            List[Tuple]: Selected point coordinates
+        """
+        return self.selection_engine.select_farthest(
+            self.points, target, count
+        )
+
+    def select_all(self) -> List[Tuple]:
+        """
+        Select all points.
+
+        Returns:
+            List[Tuple]: All point coordinates
+        """
+        return self.selection_engine.select_all(self.points)
+
+    def get_selection(self) -> List[Tuple]:
+        """
+        Get current selection.
+
+        Returns:
+            List[Tuple]: Selected point coordinates
+        """
+        return self.selection_engine.get_selection()
+
+    def get_selection_count(self) -> int:
+        """Get number of selected points."""
+        return self.selection_engine.get_selection_count()
+
+    def clear_selection(self) -> None:
+        """Clear current selection."""
+        self.selection_engine.clear_selection()
+
+    def save_selection(self) -> None:
+        """Save current selection to history."""
+        self.selection_engine.save_selection()
+
+    def load_selection(self, index: int = -1) -> None:
+        """Load selection from history."""
+        self.selection_engine.load_selection(index)
+
+    # ========== Analysis Methods ==========
+
+    def get_bounding_box(self) -> Optional[Tuple]:
+        """
+        Get bounding box of all points.
+
+        Returns:
+            Optional[Tuple]: ((min_coords), (max_coords)) or None
+        """
+        return self.points.get_bounding_box()
+
+    def get_centroid(self) -> Optional[Point]:
+        """
+        Get centroid of all points.
+
+        Returns:
+            Optional[Point]: Centroid point or None
+        """
+        return self.points.get_centroid()
+
+    def get_statistics(self) -> Dict[str, Any]:
+        """
+        Get statistics about points on canvas.
+
+        Returns:
+            Dict: Statistics including count, dimensions, bbox, centroid
+        """
+        bbox = self.get_bounding_box()
+        centroid = self.get_centroid()
+
+        return {
+            'point_count': self.get_point_count(),
+            'shape_count': self.get_shape_count(),
+            'dimensions': self.points.dimensions,
+            'bounding_box': bbox,
+            'centroid': centroid.coords if centroid else None,
+            'selection_count': self.get_selection_count()
+        }
+
+    def find_nearest_point(self, target: Tuple) -> Optional[Point]:
+        """
+        Find nearest point to target.
+
+        Args:
+            target: Target coordinates
+
+        Returns:
+            Optional[Point]: Nearest point or None
+        """
+        return self.points.find_nearest(Point(*target))
+
+    def find_farthest_point(self, target: Tuple) -> Optional[Point]:
+        """
+        Find farthest point from target.
+
+        Args:
+            target: Target coordinates
+
+        Returns:
+            Optional[Point]: Farthest point or None
+        """
+        return self.points.find_farthest(Point(*target))
+
+    # ========== Metadata and Utilities ==========
+
+    def set_metadata(self, key: str, value: Any) -> None:
+        """Set metadata value."""
+        self.metadata[key] = value
+
+    def get_metadata(self, key: str, default=None) -> Any:
+        """Get metadata value."""
+        return self.metadata.get(key, default)
+
+    def export_points(self) -> List[Dict[str, Any]]:
+        """
+        Export all points as list of dictionaries.
+
+        Returns:
+            List[Dict]: Points with coordinates and metadata
+        """
+        result = []
+        for point in self.points:
+            result.append({
+                'coords': point.coords,
+                'label': point.label,
+                'dimensions': point.dimensions,
+                'metadata': point.metadata
+            })
+        return result
+
+    def export_shapes(self) -> List[Dict[str, Any]]:
+        """
+        Export all shapes as list of dictionaries.
+
+        Returns:
+            List[Dict]: Shapes with type and properties
+        """
+        result = []
+        for shape in self.shapes:
+            result.append({
+                'type': shape.__class__.__name__,
+                'filled': shape.filled,
+                'color': shape.color,
+                'points': shape.get_points()
+            })
+        return result
+
+    def clear(self) -> None:
+        """Clear all points and shapes."""
+        self.points.clear()
+        self.shapes.clear()
+        self.selection_engine.clear_selection()
+
+    def __repr__(self) -> str:
+        """String representation."""
+        return f"MultidimensionalPaint({self.get_point_count()} points, " \
+               f"{self.get_shape_count()} shapes)"

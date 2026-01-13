@@ -1,0 +1,451 @@
+# -*- coding: utf-8 -*-
+"""
+MenuMaker: A simple and powerful menu management module.
+
+Provides easy-to-use classes for managing menus with various item types
+(text input, numeric input, checkboxes, radio buttons, submenus) and
+built-in support for internationalization via gettext.
+
+Can be easily integrated into console and graphical applications.
+"""
+
+import gettext
+import os
+from enum import Enum
+from typing import Any, Callable, Dict, List, Optional, Union, Tuple
+from copy import deepcopy
+
+
+class ItemType(Enum):
+    """Enumeration of menu item types."""
+    TEXT = "text"           # Text input
+    NUMERIC = "numeric"     # Numeric input
+    CHECKBOX = "checkbox"   # Boolean checkbox
+    RADIO = "radio"         # Radio button (single selection)
+    SUBMENU = "submenu"     # Submenu
+    ACTION = "action"       # Action button
+    SEPARATOR = "separator" # Visual separator
+
+
+class MenuItem:
+    """Represents a single menu item."""
+    
+    def __init__(
+        self,
+        identifier: str,
+        label: str,
+        item_type: ItemType = ItemType.ACTION,
+        value: Any = None,
+        default_value: Any = None,
+        options: Optional[List[str]] = None,
+        callback: Optional[Callable] = None,
+        enabled: bool = True,
+        visible: bool = True,
+        description: str = ""
+    ):
+        """
+        Initialize a menu item.
+        
+        Args:
+            identifier: Unique identifier for the item
+            label: Display label (translatable)
+            item_type: Type of menu item
+            value: Current value
+            default_value: Default value
+            options: Options for radio items
+            callback: Callback function when item is activated
+            enabled: Whether item is enabled
+            visible: Whether item is visible
+            description: Help text for the item
+        """
+        self.identifier = identifier
+        self.label = label
+        self.item_type = item_type
+        self.value = value if value is not None else default_value
+        self.default_value = default_value
+        self.options = options or []
+        self.callback = callback
+        self.enabled = enabled
+        self.visible = visible
+        self.description = description
+    
+    def __repr__(self) -> str:
+        return (
+            f"MenuItem(id={self.identifier}, label={self.label}, "
+            f"type={self.item_type.value}, value={self.value})"
+        )
+    
+    def reset(self) -> None:
+        """Reset item to default value."""
+        self.value = self.default_value
+    
+    def execute(self) -> Any:
+        """Execute the item's callback."""
+        if self.callback:
+            return self.callback(self)
+        return None
+
+
+class Menu:
+    """Represents a menu with multiple items."""
+    
+    def __init__(
+        self,
+        identifier: str,
+        label: str = "",
+        description: str = "",
+        allow_multiple_selection: bool = False
+    ):
+        """
+        Initialize a menu.
+        
+        Args:
+            identifier: Unique identifier
+            label: Display label
+            description: Menu description
+            allow_multiple_selection: Allow multiple selections in radio items
+        """
+        self.identifier = identifier
+        self.label = label
+        self.description = description
+        self.allow_multiple_selection = allow_multiple_selection
+        self.items: Dict[str, MenuItem] = {}
+        self.submenus: Dict[str, 'Menu'] = {}
+    
+    def add_item(
+        self,
+        identifier: str,
+        label: str,
+        item_type: ItemType = ItemType.ACTION,
+        **kwargs
+    ) -> MenuItem:
+        """Add an item to the menu."""
+        item = MenuItem(identifier, label, item_type, **kwargs)
+        self.items[identifier] = item
+        return item
+    
+    def add_text_input(
+        self,
+        identifier: str,
+        label: str,
+        default: str = "",
+        **kwargs
+    ) -> MenuItem:
+        """Add text input item."""
+        return self.add_item(
+            identifier,
+            label,
+            ItemType.TEXT,
+            value=default,
+            default_value=default,
+            **kwargs
+        )
+    
+    def add_numeric_input(
+        self,
+        identifier: str,
+        label: str,
+        default: Union[int, float] = 0,
+        min_val: Optional[float] = None,
+        max_val: Optional[float] = None,
+        **kwargs
+    ) -> MenuItem:
+        """Add numeric input item."""
+        item = self.add_item(
+            identifier,
+            label,
+            ItemType.NUMERIC,
+            value=default,
+            default_value=default,
+            **kwargs
+        )
+        item.min_val = min_val
+        item.max_val = max_val
+        return item
+    
+    def add_checkbox(
+        self,
+        identifier: str,
+        label: str,
+        default: bool = False,
+        **kwargs
+    ) -> MenuItem:
+        """Add checkbox item."""
+        return self.add_item(
+            identifier,
+            label,
+            ItemType.CHECKBOX,
+            value=default,
+            default_value=default,
+            **kwargs
+        )
+    
+    def add_radio(
+        self,
+        identifier: str,
+        label: str,
+        options: List[str],
+        default: Optional[str] = None,
+        **kwargs
+    ) -> MenuItem:
+        """Add radio button item."""
+        if default is None:
+            default = options[0] if options else None
+        return self.add_item(
+            identifier,
+            label,
+            ItemType.RADIO,
+            value=default,
+            default_value=default,
+            options=options,
+            **kwargs
+        )
+    
+    def add_submenu(
+        self,
+        identifier: str,
+        label: str,
+        submenu: 'Menu',
+        **kwargs
+    ) -> MenuItem:
+        """Add submenu."""
+        item = self.add_item(
+            identifier,
+            label,
+            ItemType.SUBMENU,
+            **kwargs
+        )
+        self.submenus[identifier] = submenu
+        item.submenu = submenu
+        return item
+    
+    def add_action(
+        self,
+        identifier: str,
+        label: str,
+        callback: Optional[Callable] = None,
+        **kwargs
+    ) -> MenuItem:
+        """Add action button."""
+        return self.add_item(
+            identifier,
+            label,
+            ItemType.ACTION,
+            callback=callback,
+            **kwargs
+        )
+    
+    def add_separator(
+        self,
+        identifier: str = None
+    ) -> MenuItem:
+        """Add visual separator."""
+        if identifier is None:
+            identifier = f"sep_{len(self.items)}"
+        return self.add_item(
+            identifier,
+            "",
+            ItemType.SEPARATOR
+        )
+    
+    def get_item(self, identifier: str) -> Optional[MenuItem]:
+        """Get item by identifier."""
+        return self.items.get(identifier)
+    
+    def set_value(self, identifier: str, value: Any) -> bool:
+        """Set value of an item."""
+        item = self.get_item(identifier)
+        if item:
+            if item.item_type == ItemType.NUMERIC:
+                min_val = getattr(item, 'min_val', None)
+                max_val = getattr(item, 'max_val', None)
+                if min_val is not None and value < min_val:
+                    return False
+                if max_val is not None and value > max_val:
+                    return False
+            item.value = value
+            return True
+        return False
+    
+    def get_value(self, identifier: str) -> Any:
+        """Get value of an item."""
+        item = self.get_item(identifier)
+        return item.value if item else None
+    
+    def get_all_values(self) -> Dict[str, Any]:
+        """Get all values from this menu."""
+        return {
+            identifier: item.value
+            for identifier, item in self.items.items()
+            if item.item_type != ItemType.SEPARATOR
+        }
+    
+    def set_all_values(self, values: Dict[str, Any]) -> None:
+        """Set multiple values at once."""
+        for identifier, value in values.items():
+            self.set_value(identifier, value)
+    
+    def reset_all(self) -> None:
+        """Reset all items to default values."""
+        for item in self.items.values():
+            item.reset()
+    
+    def enable_item(self, identifier: str) -> bool:
+        """Enable an item."""
+        item = self.get_item(identifier)
+        if item:
+            item.enabled = True
+            return True
+        return False
+    
+    def disable_item(self, identifier: str) -> bool:
+        """Disable an item."""
+        item = self.get_item(identifier)
+        if item:
+            item.enabled = False
+            return True
+        return False
+    
+    def show_item(self, identifier: str) -> bool:
+        """Show an item."""
+        item = self.get_item(identifier)
+        if item:
+            item.visible = True
+            return True
+        return False
+    
+    def hide_item(self, identifier: str) -> bool:
+        """Hide an item."""
+        item = self.get_item(identifier)
+        if item:
+            item.visible = False
+            return True
+        return False
+    
+    def get_visible_items(self) -> List[MenuItem]:
+        """Get only visible items."""
+        return [
+            item for item in self.items.values()
+            if item.visible
+        ]
+    
+    def get_enabled_items(self) -> List[MenuItem]:
+        """Get only enabled items."""
+        return [
+            item for item in self.items.values()
+            if item.enabled
+        ]
+    
+    def remove_item(self, identifier: str) -> bool:
+        """Remove an item."""
+        if identifier in self.items:
+            del self.items[identifier]
+            if identifier in self.submenus:
+                del self.submenus[identifier]
+            return True
+        return False
+    
+    def clear_items(self) -> None:
+        """Remove all items."""
+        self.items.clear()
+        self.submenus.clear()
+    
+    def copy(self) -> 'Menu':
+        """Create a deep copy of the menu."""
+        return deepcopy(self)
+    
+    def __repr__(self) -> str:
+        return (
+            f"Menu(id={self.identifier}, label={self.label}, "
+            f"items={len(self.items)})"
+        )
+
+
+class MenuSystem:
+    """Manages a complete menu system with translations."""
+    
+    def __init__(
+        self,
+        locale_dir: Optional[str] = None,
+        default_language: str = "en"
+    ):
+        """
+        Initialize menu system with translation support.
+        
+        Args:
+            locale_dir: Directory containing translation files
+            default_language: Default language (en, fr, etc.)
+        """
+        self.menus: Dict[str, Menu] = {}
+        self.locale_dir = locale_dir
+        self.default_language = default_language
+        self.current_language = default_language
+        self._setup_translations()
+    
+    def _setup_translations(self) -> None:
+        """Setup gettext for translations."""
+        if self.locale_dir and os.path.isdir(self.locale_dir):
+            try:
+                translation = gettext.translation(
+                    'menumaker',
+                    localedir=self.locale_dir,
+                    languages=[self.current_language],
+                    fallback=True
+                )
+                translation.install()
+            except Exception:
+                # Fallback to dummy translation
+                gettext.install('menumaker')
+        else:
+            gettext.install('menumaker')
+    
+    def set_language(self, language: str) -> None:
+        """Change current language."""
+        self.current_language = language
+        self._setup_translations()
+    
+    def create_menu(
+        self,
+        identifier: str,
+        label: str = "",
+        description: str = ""
+    ) -> Menu:
+        """Create a new menu."""
+        menu = Menu(identifier, label, description)
+        self.menus[identifier] = menu
+        return menu
+    
+    def get_menu(self, identifier: str) -> Optional[Menu]:
+        """Get menu by identifier."""
+        return self.menus.get(identifier)
+    
+    def remove_menu(self, identifier: str) -> bool:
+        """Remove menu."""
+        if identifier in self.menus:
+            del self.menus[identifier]
+            return True
+        return False
+    
+    def __repr__(self) -> str:
+        return f"MenuSystem(menus={len(self.menus)}, language={self.current_language})"
+
+
+# Convenience functions for quick menu creation
+def create_simple_menu(
+    title: str,
+    items: List[Tuple[str, str, ItemType]]
+) -> Menu:
+    """
+    Create a simple menu from item list.
+    
+    Args:
+        title: Menu title
+        items: List of (id, label, type) tuples
+    
+    Returns:
+        Configured Menu object
+    """
+    menu = Menu(title.lower().replace(" ", "_"), label=title)
+    for item_id, label, item_type in items:
+        menu.add_item(item_id, label, item_type)
+    return menu

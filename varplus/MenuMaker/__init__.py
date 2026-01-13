@@ -1,0 +1,68 @@
+# -*- coding: utf-8 -*-
+"""
+MenuMaker - Interactive Menu System for Terminal Applications
+
+A comprehensive menu management module for console and terminal applications that provides:
+- Interactive menu creation and management
+- Multiple item types (text input, numeric input, checkboxes, radio buttons, submenus)
+- Built-in internationalization support via gettext
+- Simple and intuitive API
+- Support for complex menu hierarchies
+
+This module is part of the variableplus project.
+
+Project: variableplus
+Created by: Musclor13
+Developed with AI assistance
+
+Version: 1.0.0
+License: MIT
+
+Features:
+- MenuItem: Individual menu items with various types
+- Menu: Interactive menu interface
+- MenuSystem: Complete menu system management
+- ItemType: Enumeration for menu item types
+- create_simple_menu: Helper function for quick menu creation
+
+Example:
+    >>> from MenuMaker import Menu, ItemType
+    >>> menu = Menu(title="Main Menu")
+    >>> menu.add_item("Option 1", ItemType.TEXT)
+    >>> menu.add_item("Option 2", ItemType.NUMERIC)
+    >>> menu.display()
+
+For complete documentation, see README.md
+Documentation available in: English, French
+"""
+
+from .menu import (
+    MenuItem,
+    Menu,
+    MenuSystem,
+    ItemType,
+    create_simple_menu
+)
+
+__module__ = 'MenuMaker'
+__project__ = 'variableplus'
+__author__ = 'Musclor13'
+__version__ = '1.0.0'
+__license__ = 'MIT'
+__copyright__ = 'Copyright 2026 - Created with AI assistance'
+
+__all__ = [
+    'MenuItem',
+    'Menu',
+    'MenuSystem',
+    'ItemType',
+    'create_simple_menu',
+]
+__author__ = "MenuMaker Contributors"
+__all__ = [
+    "MenuItem",
+    "Menu",
+    "MenuSystem",
+    "ItemType",
+    "create_simple_menu"
+]

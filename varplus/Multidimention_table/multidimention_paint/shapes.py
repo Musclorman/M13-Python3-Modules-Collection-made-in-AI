@@ -1,0 +1,489 @@
+"""
+Geometric shapes for MultidimensionalPaint module.
+
+This module defines classes for various geometric shapes that can be
+drawn and manipulated in n-dimensional space.
+"""
+
+from abc import ABC, abstractmethod
+from typing import Tuple, List, Optional
+import math
+try:
+    from .utils import distance, interpolate, rotate_point_2d
+except ImportError:
+    from utils import distance, interpolate, rotate_point_2d
+
+
+class Shape(ABC):
+    """
+    Abstract base class for geometric shapes.
+    """
+    
+    def __init__(self, filled: bool = False, color: Optional[str] = None):
+        """
+        Initialize a shape.
+        
+        Args:
+            filled: Whether the shape is filled
+            color: Optional color specification
+        """
+        self.filled = filled
+        self.color = color
+        self.points = []
+    
+    @abstractmethod
+    def get_points(self) -> List[Tuple]:
+        """
+        Get all points that make up the shape.
+        
+        Returns:
+            List[Tuple]: List of coordinate tuples
+        """
+        pass
+    
+    @abstractmethod
+    def contains_point(self, point: Tuple) -> bool:
+        """
+        Check if a point is inside or on the shape.
+        
+        Args:
+            point: Point coordinates
+            
+        Returns:
+            bool: True if point is contained
+        """
+        pass
+    
+    def __repr__(self) -> str:
+        """String representation."""
+        filled_str = "filled" if self.filled else "empty"
+        return f"{self.__class__.__name__}({filled_str})"
+
+
+class Line(Shape):
+    """
+    Represents a line segment in n-dimensional space.
+    """
+    
+    def __init__(self, start: Tuple, end: Tuple, num_points: int = 100, **kwargs):
+        """
+        Initialize a line segment.
+        
+        Args:
+            start: Start point coordinates
+            end: End point coordinates
+            num_points: Number of points to interpolate
+            **kwargs: Additional arguments for Shape
+        """
+        super().__init__(**kwargs)
+        self.start = start
+        self.end = end
+        self.num_points = num_points
+        self._generate_points()
+    
+    def _generate_points(self):
+        """Generate interpolated points along the line."""
+        self.points = []
+        for i in range(self.num_points):
+            t = i / (self.num_points - 1) if self.num_points > 1 else 0
+            point = interpolate(self.start, self.end, t)
+            self.points.append(point)
+    
+    def get_points(self) -> List[Tuple]:
+        """Get all points on the line."""
+        return self.points
+    
+    def contains_point(self, point: Tuple, tolerance: float = 0.1) -> bool:
+        """Check if point is on the line."""
+        from .utils import point_on_line
+        return point_on_line(point, self.start, self.end, tolerance)
+    
+    def length(self) -> float:
+        """Calculate length of the line."""
+        return distance(self.start, self.end)
+
+
+class Circle(Shape):
+    """
+    Represents a circle in 2D or 3D space.
+    """
+    
+    def __init__(self, center: Tuple, radius: float, num_points: int = 360, **kwargs):
+        """
+        Initialize a circle.
+        
+        Args:
+            center: Center coordinates (2D or 3D)
+            radius: Radius of the circle
+            num_points: Number of points on the circumference
+            **kwargs: Additional arguments for Shape
+        """
+        if len(center) < 2:
+            raise ValueError("Circle requires at least 2D coordinates")
+        
+        super().__init__(**kwargs)
+        self.center = center
+        self.radius = radius
+        self.num_points = num_points
+        self._generate_points()
+    
+    def _generate_points(self):
+        """Generate points along the circle."""
+        self.points = []
+        
+        if len(self.center) == 2:
+            # 2D circle
+            for i in range(self.num_points):
+                angle = 2 * math.pi * i / self.num_points
+                x = self.center[0] + self.radius * math.cos(angle)
+                y = self.center[1] + self.radius * math.sin(angle)
+                self.points.append((x, y))
+        else:
+            # 3D circle (in XY plane, Z constant)
+            for i in range(self.num_points):
+                angle = 2 * math.pi * i / self.num_points
+                x = self.center[0] + self.radius * math.cos(angle)
+                y = self.center[1] + self.radius * math.sin(angle)
+                z = self.center[2] if len(self.center) > 2 else 0
+                self.points.append((x, y, z) + self.center[3:])
+    
+    def get_points(self) -> List[Tuple]:
+        """Get all points on the circle."""
+        return self.points
+    
+    def contains_point(self, point: Tuple, tolerance: float = 0.1) -> bool:
+        """Check if point is inside/on the circle."""
+        if len(point) < len(self.center):
+            return False
+        
+        # Calculate distance in the plane of the circle
+        dist = distance(point[:len(self.center)], self.center)
+        
+        if self.filled:
+            return dist <= self.radius + tolerance
+        else:
+            return abs(dist - self.radius) <= tolerance
+
+
+class Rectangle(Shape):
+    """
+    Represents a rectangle in 2D space.
+    """
+    
+    def __init__(self, corner1: Tuple, corner2: Tuple, num_points: int = 100, **kwargs):
+        """
+        Initialize a rectangle.
+        
+        Args:
+            corner1: First corner coordinates
+            corner2: Opposite corner coordinates
+            num_points: Number of points on edges
+            **kwargs: Additional arguments for Shape
+        """
+        if len(corner1) < 2 or len(corner2) < 2:
+            raise ValueError("Rectangle requires at least 2D coordinates")
+        
+        super().__init__(**kwargs)
+        self.corner1 = corner1
+        self.corner2 = corner2
+        self.num_points = num_points
+        self._generate_points()
+    
+    def _generate_points(self):
+        """Generate points along the rectangle edges."""
+        self.points = []
+        
+        x1, y1 = self.corner1[0], self.corner1[1]
+        x2, y2 = self.corner2[0], self.corner2[1]
+        
+        # Ensure x1 < x2 and y1 < y2
+        x_min, x_max = min(x1, x2), max(x1, x2)
+        y_min, y_max = min(y1, y2), max(y1, y2)
+        
+        points_per_side = self.num_points // 4
+        
+        # Top edge
+        for i in range(points_per_side):
+            t = i / points_per_side
+            x = x_min + (x_max - x_min) * t
+            self.points.append((x, y_max) + self.corner1[2:])
+        
+        # Right edge
+        for i in range(points_per_side):
+            t = i / points_per_side
+            y = y_max - (y_max - y_min) * t
+            self.points.append((x_max, y) + self.corner1[2:])
+        
+        # Bottom edge
+        for i in range(points_per_side):
+            t = i / points_per_side
+            x = x_max - (x_max - x_min) * t
+            self.points.append((x, y_min) + self.corner1[2:])
+        
+        # Left edge
+        for i in range(points_per_side):
+            t = i / points_per_side
+            y = y_min + (y_max - y_min) * t
+            self.points.append((x_min, y) + self.corner1[2:])
+    
+    def get_points(self) -> List[Tuple]:
+        """Get all points on the rectangle."""
+        return self.points
+    
+    def contains_point(self, point: Tuple, tolerance: float = 0.1) -> bool:
+        """Check if point is inside/on the rectangle."""
+        if len(point) < 2:
+            return False
+        
+        x, y = point[0], point[1]
+        x1, y1 = self.corner1[0], self.corner1[1]
+        x2, y2 = self.corner2[0], self.corner2[1]
+        
+        x_min, x_max = min(x1, x2), max(x1, x2)
+        y_min, y_max = min(y1, y2), max(y1, y2)
+        
+        if self.filled:
+            return (x_min - tolerance <= x <= x_max + tolerance and
+                    y_min - tolerance <= y <= y_max + tolerance)
+        else:
+            on_edge = ((abs(x - x_min) <= tolerance or abs(x - x_max) <= tolerance) and
+                       (y_min - tolerance <= y <= y_max + tolerance)) or \
+                      ((abs(y - y_min) <= tolerance or abs(y - y_max) <= tolerance) and
+                       (x_min - tolerance <= x <= x_max + tolerance))
+            return on_edge
+
+
+class Square(Rectangle):
+    """
+    Represents a square in 2D space.
+    """
+    
+    def __init__(self, center: Tuple, side_length: float, **kwargs):
+        """
+        Initialize a square.
+        
+        Args:
+            center: Center coordinates
+            side_length: Length of each side
+            **kwargs: Additional arguments for Rectangle
+        """
+        half_side = side_length / 2
+        corner1 = (center[0] - half_side, center[1] - half_side) + center[2:]
+        corner2 = (center[0] + half_side, center[1] + half_side) + center[2:]
+        super().__init__(corner1, corner2, **kwargs)
+
+
+class Ellipse(Shape):
+    """
+    Represents an ellipse in 2D space.
+    """
+    
+    def __init__(self, center: Tuple, semi_major: float, semi_minor: float, 
+                 rotation: float = 0, num_points: int = 360, **kwargs):
+        """
+        Initialize an ellipse.
+        
+        Args:
+            center: Center coordinates
+            semi_major: Semi-major axis length
+            semi_minor: Semi-minor axis length
+            rotation: Rotation angle in radians
+            num_points: Number of points on the ellipse
+            **kwargs: Additional arguments for Shape
+        """
+        if len(center) < 2:
+            raise ValueError("Ellipse requires at least 2D coordinates")
+        
+        super().__init__(**kwargs)
+        self.center = center
+        self.semi_major = semi_major
+        self.semi_minor = semi_minor
+        self.rotation = rotation
+        self.num_points = num_points
+        self._generate_points()
+    
+    def _generate_points(self):
+        """Generate points along the ellipse."""
+        self.points = []
+        
+        for i in range(self.num_points):
+            angle = 2 * math.pi * i / self.num_points
+            x = self.semi_major * math.cos(angle)
+            y = self.semi_minor * math.sin(angle)
+            
+            # Rotate
+            if self.rotation != 0:
+                x, y = rotate_point_2d((x, y), (0, 0), self.rotation)
+            
+            # Translate to center
+            x += self.center[0]
+            y += self.center[1]
+            
+            self.points.append((x, y) + self.center[2:])
+    
+    def get_points(self) -> List[Tuple]:
+        """Get all points on the ellipse."""
+        return self.points
+    
+    def contains_point(self, point: Tuple, tolerance: float = 0.1) -> bool:
+        """Check if point is inside/on the ellipse."""
+        if len(point) < 2:
+            return False
+        
+        # Translate to ellipse center
+        px = point[0] - self.center[0]
+        py = point[1] - self.center[1]
+        
+        # Rotate back
+        if self.rotation != 0:
+            px, py = rotate_point_2d((px, py), (0, 0), -self.rotation)
+        
+        # Check ellipse equation
+        dist = (px / self.semi_major) ** 2 + (py / self.semi_minor) ** 2
+        
+        if self.filled:
+            return dist <= 1 + tolerance
+        else:
+            return abs(dist - 1) <= tolerance
+
+
+class Arc(Shape):
+    """
+    Represents a circular arc in 2D space.
+    """
+    
+    def __init__(self, center: Tuple, radius: float, start_angle: float, 
+                 end_angle: float, num_points: int = 100, **kwargs):
+        """
+        Initialize a circular arc.
+        
+        Args:
+            center: Center coordinates
+            radius: Radius of the arc
+            start_angle: Starting angle in radians
+            end_angle: Ending angle in radians
+            num_points: Number of points on the arc
+            **kwargs: Additional arguments for Shape
+        """
+        if len(center) < 2:
+            raise ValueError("Arc requires at least 2D coordinates")
+        
+        super().__init__(**kwargs)
+        self.center = center
+        self.radius = radius
+        self.start_angle = start_angle
+        self.end_angle = end_angle
+        self.num_points = num_points
+        self._generate_points()
+    
+    def _generate_points(self):
+        """Generate points along the arc."""
+        self.points = []
+        
+        angle_range = self.end_angle - self.start_angle
+        
+        for i in range(self.num_points):
+            t = i / (self.num_points - 1) if self.num_points > 1 else 0
+            angle = self.start_angle + angle_range * t
+            
+            x = self.center[0] + self.radius * math.cos(angle)
+            y = self.center[1] + self.radius * math.sin(angle)
+            
+            self.points.append((x, y) + self.center[2:])
+    
+    def get_points(self) -> List[Tuple]:
+        """Get all points on the arc."""
+        return self.points
+    
+    def contains_point(self, point: Tuple, tolerance: float = 0.1) -> bool:
+        """Check if point is on the arc."""
+        if len(point) < 2:
+            return False
+        
+        # Check if point is at correct distance
+        dist = distance(point[:2], self.center[:2])
+        
+        if abs(dist - self.radius) > tolerance:
+            return False
+        
+        # Check if angle is in range
+        angle = math.atan2(point[1] - self.center[1], point[0] - self.center[0])
+        
+        # Normalize angles
+        start = self.start_angle % (2 * math.pi)
+        end = self.end_angle % (2 * math.pi)
+        angle = angle % (2 * math.pi)
+        
+        if start <= end:
+            return start <= angle <= end
+        else:
+            return angle >= start or angle <= end
+
+
+class ClosedShape(Shape):
+    """
+    Represents a closed polygon shape defined by vertices.
+    """
+    
+    def __init__(self, vertices: List[Tuple], num_points: int = 100, **kwargs):
+        """
+        Initialize a closed shape.
+        
+        Args:
+            vertices: List of vertex coordinates
+            num_points: Number of points per edge
+            **kwargs: Additional arguments for Shape
+        """
+        if len(vertices) < 3:
+            raise ValueError("Closed shape requires at least 3 vertices")
+        
+        super().__init__(**kwargs)
+        self.vertices = vertices
+        self.num_points = num_points
+        self._generate_points()
+    
+    def _generate_points(self):
+        """Generate points along the polygon edges."""
+        self.points = []
+        
+        points_per_edge = max(1, self.num_points // len(self.vertices))
+        
+        for i, vertex in enumerate(self.vertices):
+            next_vertex = self.vertices[(i + 1) % len(self.vertices)]
+            
+            for j in range(points_per_edge):
+                t = j / points_per_edge if points_per_edge > 1 else 0
+                point = interpolate(vertex, next_vertex, t)
+                self.points.append(point)
+    
+    def get_points(self) -> List[Tuple]:
+        """Get all points on the shape."""
+        return self.points
+    
+    def contains_point(self, point: Tuple, tolerance: float = 0.1) -> bool:
+        """
+        Check if point is inside/on the closed shape using ray casting algorithm.
+        """
+        if len(point) < 2:
+            return False
+        
+        x, y = point[0], point[1]
+        n = len(self.vertices)
+        inside = False
+        
+        p1x, p1y = self.vertices[0][0], self.vertices[0][1]
+        
+        for i in range(1, n + 1):
+            p2x, p2y = self.vertices[i % n][0], self.vertices[i % n][1]
+            
+            if y > min(p1y, p2y):
+                if y <= max(p1y, p2y):
+                    if x <= max(p1x, p2x):
+                        if p1y != p2y:
+                            xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+                        if p1x == p2x or x <= xinters:
+                            inside = not inside
+            
+            p1x, p1y = p2x, p2y
+        
+        return inside

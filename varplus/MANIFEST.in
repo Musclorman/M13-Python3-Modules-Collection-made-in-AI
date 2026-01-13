@@ -1,0 +1,14 @@
+include README.md
+include LICENSE
+include CHANGELOG.md
+include CONTRIBUTING.md
+include QUICK_COMMANDS.txt
+recursive-include . *.py
+recursive-include . *.txt
+recursive-include . *.md
+recursive-include . *.json
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude .DS_Store
+global-exclude build
+global-exclude dist

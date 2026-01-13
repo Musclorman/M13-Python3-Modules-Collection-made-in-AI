@@ -1,0 +1,762 @@
+"""
+Comprehensive test suite for MultidimensionalPaint module.
+
+This module contains extensive tests for all functionalities including
+point management, shape drawing, and point selection in various dimensions.
+
+Tests cover:
+- Point creation and manipulation in 1D to 5D
+- Shape creation and drawing (lines, circles, rectangles, etc.)
+- Point selection by various criteria
+- Edge cases and error handling
+"""
+
+import unittest
+import math
+from multidimension_paint import (
+    MultidimensionalPaint, Point, PointSet, Shape,
+    Line, Circle, Rectangle, Square, Ellipse, Arc, ClosedShape,
+    SelectionEngine, distance, midpoint, validate_coordinates
+)
+
+
+class TestPoint(unittest.TestCase):
+    """Tests for Point class."""
+
+    def test_point_1d(self):
+        """Test 1D point creation."""
+        p = Point(5)
+        self.assertEqual(p.coords, (5,))
+        self.assertEqual(p.dimensions, 1)
+        self.assertEqual(p.x, 5)
+
+    def test_point_2d(self):
+        """Test 2D point creation."""
+        p = Point(3, 4)
+        self.assertEqual(p.coords, (3, 4))
+        self.assertEqual(p.dimensions, 2)
+        self.assertEqual(p.x, 3)
+        self.assertEqual(p.y, 4)
+
+    def test_point_3d(self):
+        """Test 3D point creation."""
+        p = Point(1, 2, 3)
+        self.assertEqual(p.z, 3)
+        self.assertEqual(p.dimensions, 3)
+
+    def test_point_4d(self):
+        """Test 4D point creation."""
+        p = Point(1, 2, 3, 4)
+        self.assertEqual(p.w, 4)
+        self.assertEqual(p.dimensions, 4)
+
+    def test_point_5d_and_higher(self):
+        """Test 5D and higher dimensional points."""
+        p = Point(1, 2, 3, 4, 5)
+        self.assertEqual(p.dimensions, 5)
+        self.assertEqual(p.get_coordinate(4), 5)
+
+        p6d = Point(1, 2, 3, 4, 5, 6)
+        self.assertEqual(p6d.dimensions, 6)
+
+    def test_point_label(self):
+        """Test point with label."""
+        p = Point(1, 2, label="origin")
+        self.assertEqual(p.label, "origin")
+
+    def test_point_metadata(self):
+        """Test point metadata."""
+        p = Point(1, 2)
+        p.set_metadata("color", "red")
+        self.assertEqual(p.get_metadata("color"), "red")
+        self.assertEqual(p.get_metadata("missing", "default"), "default")
+
+    def test_point_distance_2d(self):
+        """Test 2D distance calculation."""
+        p1 = Point(0, 0)
+        p2 = Point(3, 4)
+        self.assertEqual(p1.distance_to(p2), 5.0)
+
+    def test_point_distance_3d(self):
+        """Test 3D distance calculation."""
+        p1 = Point(0, 0, 0)
+        p2 = Point(1, 1, 1)
+        expected = math.sqrt(3)
+        self.assertAlmostEqual(p1.distance_to(p2), expected, places=5)
+
+    def test_point_distance_dimension_mismatch(self):
+        """Test distance calculation with dimension mismatch."""
+        p1 = Point(0, 0)
+        p2 = Point(1, 2, 3)
+        with self.assertRaises(ValueError):
+            p1.distance_to(p2)
+
+    def test_point_invalid_coordinates(self):
+        """Test point creation with invalid coordinates."""
+        with self.assertRaises(ValueError):
+            Point("not_a_number", 2)
+
+    def test_point_equality(self):
+        """Test point equality."""
+        p1 = Point(1, 2, 3)
+        p2 = Point(1, 2, 3)
+        p3 = Point(1, 2, 4)
+        self.assertEqual(p1, p2)
+        self.assertNotEqual(p1, p3)
+
+    def test_point_hash(self):
+        """Test point can be used in sets/dicts."""
+        p1 = Point(1, 2)
+        p2 = Point(1, 2)
+        point_set = {p1, p2}
+        self.assertEqual(len(point_set), 1)
+
+    def test_point_indexing(self):
+        """Test point coordinate access by index."""
+        p = Point(1, 2, 3, 4)
+        self.assertEqual(p[0], 1)
+        self.assertEqual(p[3], 4)
+
+    def test_point_iteration(self):
+        """Test point iteration over coordinates."""
+        p = Point(1, 2, 3)
+        coords = list(p)
+        self.assertEqual(coords, [1, 2, 3])
+
+
+class TestPointSet(unittest.TestCase):
+    """Tests for PointSet class."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.point_set = PointSet()
+
+    def test_add_point(self):
+        """Test adding points to set."""
+        p = Point(1, 2)
+        self.point_set.add_point(p)
+        self.assertEqual(self.point_set.count, 1)
+
+    def test_add_multiple_points(self):
+        """Test adding multiple points."""
+        for i in range(5):
+            self.point_set.add_point(Point(i, i))
+        self.assertEqual(self.point_set.count, 5)
+
+    def test_dimension_consistency(self):
+        """Test that all points must have same dimensions."""
+        self.point_set.add_point(Point(1, 2))
+        with self.assertRaises(ValueError):
+            self.point_set.add_point(Point(1, 2, 3))
+
+    def test_remove_point(self):
+        """Test removing a point."""
+        p = Point(1, 2)
+        self.point_set.add_point(p)
+        self.assertTrue(self.point_set.remove_point(p))
+        self.assertEqual(self.point_set.count, 0)
+
+    def test_get_point_by_index(self):
+        """Test getting point by index."""
+        p = Point(5, 6)
+        self.point_set.add_point(p)
+        retrieved = self.point_set.get_point(0)
+        self.assertEqual(retrieved, p)
+
+    def test_get_point_by_label(self):
+        """Test getting point by label."""
+        p = Point(1, 2, label="test")
+        self.point_set.add_point(p)
+        retrieved = self.point_set.get_by_label("test")
+        self.assertEqual(retrieved, p)
+
+    def test_find_nearest(self):
+        """Test finding nearest point."""
+        self.point_set.add_point(Point(0, 0))
+        self.point_set.add_point(Point(1, 1))
+        self.point_set.add_point(Point(10, 10))
+
+        nearest = self.point_set.find_nearest(Point(1, 1))
+        self.assertEqual(nearest.coords, (1, 1))
+
+    def test_find_farthest(self):
+        """Test finding farthest point."""
+        self.point_set.add_point(Point(0, 0))
+        self.point_set.add_point(Point(1, 1))
+        self.point_set.add_point(Point(10, 10))
+
+        farthest = self.point_set.find_farthest(Point(0, 0))
+        self.assertEqual(farthest.coords, (10, 10))
+
+    def test_bounding_box(self):
+        """Test bounding box calculation."""
+        self.point_set.add_point(Point(1, 2))
+        self.point_set.add_point(Point(5, 8))
+        self.point_set.add_point(Point(3, 4))
+
+        bbox = self.point_set.get_bounding_box()
+        self.assertEqual(bbox[0], (1, 2))
+        self.assertEqual(bbox[1], (5, 8))
+
+    def test_centroid(self):
+        """Test centroid calculation."""
+        self.point_set.add_point(Point(0, 0))
+        self.point_set.add_point(Point(2, 2))
+        self.point_set.add_point(Point(4, 4))
+
+        centroid = self.point_set.get_centroid()
+        self.assertEqual(centroid.coords, (2, 2))
+
+    def test_clear(self):
+        """Test clearing point set."""
+        self.point_set.add_point(Point(1, 2))
+        self.point_set.clear()
+        self.assertEqual(self.point_set.count, 0)
+
+
+class TestUtilities(unittest.TestCase):
+    """Tests for utility functions."""
+
+    def test_validate_coordinates(self):
+        """Test coordinate validation."""
+        self.assertTrue(validate_coordinates(1, 2, 3))
+        self.assertTrue(validate_coordinates(1.5, 2.5))
+        self.assertFalse(validate_coordinates(1, "2", 3))
+
+    def test_distance_2d(self):
+        """Test 2D distance calculation."""
+        d = distance((0, 0), (3, 4))
+        self.assertEqual(d, 5.0)
+
+    def test_distance_3d(self):
+        """Test 3D distance calculation."""
+        d = distance((0, 0, 0), (1, 1, 1))
+        self.assertAlmostEqual(d, math.sqrt(3), places=5)
+
+    def test_distance_dimension_mismatch(self):
+        """Test distance with different dimensions."""
+        with self.assertRaises(ValueError):
+            distance((0, 0), (1, 2, 3))
+
+    def test_midpoint_2d(self):
+        """Test 2D midpoint calculation."""
+        mp = midpoint((0, 0), (4, 4))
+        self.assertEqual(mp, (2, 2))
+
+    def test_midpoint_multiple_points(self):
+        """Test midpoint of multiple points."""
+        mp = midpoint((0, 0), (2, 2), (4, 4))
+        self.assertEqual(mp, (2, 2))
+
+    def test_midpoint_3d(self):
+        """Test 3D midpoint calculation."""
+        mp = midpoint((0, 0, 0), (2, 4, 6))
+        self.assertEqual(mp, (1.0, 2.0, 3.0))
+
+
+class TestLine(unittest.TestCase):
+    """Tests for Line shape."""
+
+    def test_line_creation(self):
+        """Test line creation."""
+        line = Line((0, 0), (10, 10))
+        self.assertIsNotNone(line)
+        self.assertEqual(len(line.get_points()), 100)
+
+    def test_line_length(self):
+        """Test line length calculation."""
+        line = Line((0, 0), (3, 4))
+        self.assertEqual(line.length(), 5.0)
+
+    def test_line_contains_point(self):
+        """Test checking if point is on line."""
+        line = Line((0, 0), (10, 10))
+        self.assertTrue(line.contains_point((5, 5), tolerance=0.5))
+        self.assertFalse(line.contains_point((5, 0), tolerance=0.5))
+
+    def test_line_3d(self):
+        """Test 3D line."""
+        line = Line((0, 0, 0), (1, 1, 1))
+        points = line.get_points()
+        self.assertEqual(len(points), 100)
+        self.assertEqual(len(points[0]), 3)
+
+
+class TestCircle(unittest.TestCase):
+    """Tests for Circle shape."""
+
+    def test_circle_creation(self):
+        """Test circle creation."""
+        circle = Circle((0, 0), 5)
+        self.assertIsNotNone(circle)
+        self.assertEqual(len(circle.get_points()), 360)
+
+    def test_circle_points_on_circumference(self):
+        """Test that generated points are on circumference."""
+        circle = Circle((0, 0), 5, num_points=360)
+        points = circle.get_points()
+
+        for point in points:
+            d = distance(point, (0, 0))
+            self.assertAlmostEqual(d, 5.0, places=1)
+
+    def test_circle_contains_center(self):
+        """Test filled circle contains center."""
+        circle = Circle((0, 0), 5, filled=True)
+        self.assertTrue(circle.contains_point((0, 0)))
+
+    def test_circle_3d(self):
+        """Test 3D circle."""
+        circle = Circle((0, 0, 5), 3)
+        points = circle.get_points()
+        self.assertEqual(len(points[0]), 3)
+
+    def test_empty_circle(self):
+        """Test empty circle."""
+        circle = Circle((0, 0), 5, filled=False)
+        points = circle.get_points()
+        self.assertGreater(len(points), 0)
+
+
+class TestRectangle(unittest.TestCase):
+    """Tests for Rectangle shape."""
+
+    def test_rectangle_creation(self):
+        """Test rectangle creation."""
+        rect = Rectangle((0, 0), (10, 10))
+        self.assertIsNotNone(rect)
+        points = rect.get_points()
+        self.assertGreater(len(points), 0)
+
+    def test_rectangle_contains_edge(self):
+        """Test rectangle contains points on edges."""
+        rect = Rectangle((0, 0), (10, 10), filled=False)
+        self.assertTrue(rect.contains_point((0, 5), tolerance=0.5))
+        self.assertTrue(rect.contains_point((5, 10), tolerance=0.5))
+
+    def test_rectangle_filled(self):
+        """Test filled rectangle contains interior."""
+        rect = Rectangle((0, 0), (10, 10), filled=True)
+        self.assertTrue(rect.contains_point((5, 5)))
+
+    def test_rectangle_3d(self):
+        """Test 3D rectangle."""
+        rect = Rectangle((0, 0, 5), (10, 10, 5))
+        points = rect.get_points()
+        self.assertEqual(len(points[0]), 3)
+
+
+class TestSquare(unittest.TestCase):
+    """Tests for Square shape."""
+
+    def test_square_creation(self):
+        """Test square creation."""
+        square = Square((0, 0), 10)
+        self.assertIsNotNone(square)
+
+    def test_square_symmetry(self):
+        """Test square is symmetric."""
+        square = Square((5, 5), 10, filled=True)
+        self.assertTrue(square.contains_point((5, 5)))
+        self.assertTrue(square.contains_point((0, 0)))
+        self.assertTrue(square.contains_point((10, 10)))
+
+
+class TestEllipse(unittest.TestCase):
+    """Tests for Ellipse shape."""
+
+    def test_ellipse_creation(self):
+        """Test ellipse creation."""
+        ellipse = Ellipse((0, 0), 10, 5)
+        self.assertIsNotNone(ellipse)
+
+    def test_ellipse_points(self):
+        """Test ellipse generates correct number of points."""
+        ellipse = Ellipse((0, 0), 10, 5, num_points=360)
+        points = ellipse.get_points()
+        self.assertEqual(len(points), 360)
+
+    def test_ellipse_with_rotation(self):
+        """Test rotated ellipse."""
+        ellipse = Ellipse((0, 0), 10, 5, rotation=math.pi/4)
+        points = ellipse.get_points()
+        self.assertGreater(len(points), 0)
+
+
+class TestArc(unittest.TestCase):
+    """Tests for Arc shape."""
+
+    def test_arc_creation(self):
+        """Test arc creation."""
+        arc = Arc((0, 0), 5, 0, math.pi/2)
+        self.assertIsNotNone(arc)
+
+    def test_arc_quarter_circle(self):
+        """Test quarter circle arc."""
+        arc = Arc((0, 0), 5, 0, math.pi/2, num_points=100)
+        points = arc.get_points()
+        self.assertEqual(len(points), 100)
+
+    def test_arc_full_circle(self):
+        """Test full circle arc."""
+        arc = Arc((0, 0), 5, 0, 2*math.pi)
+        points = arc.get_points()
+        self.assertGreater(len(points), 0)
+
+
+class TestClosedShape(unittest.TestCase):
+    """Tests for ClosedShape."""
+
+    def test_triangle(self):
+        """Test triangle creation."""
+        triangle = ClosedShape([(0, 0), (10, 0), (5, 10)])
+        self.assertIsNotNone(triangle)
+
+    def test_pentagon(self):
+        """Test pentagon creation."""
+        vertices = [
+            (0, 0),
+            (10, 0),
+            (15, 8),
+            (7.5, 15),
+            (-5, 8)
+        ]
+        pentagon = ClosedShape(vertices)
+        self.assertIsNotNone(pentagon)
+
+    def test_closed_shape_contains_center(self):
+        """Test filled closed shape contains interior."""
+        triangle = ClosedShape([(0, 0), (10, 0), (5, 10)], filled=True)
+        self.assertTrue(triangle.contains_point((5, 3)))
+
+    def test_minimum_vertices(self):
+        """Test that closed shape requires at least 3 vertices."""
+        with self.assertRaises(ValueError):
+            ClosedShape([(0, 0), (1, 1)])
+
+
+class TestSelectionEngine(unittest.TestCase):
+    """Tests for SelectionEngine."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.engine = SelectionEngine()
+        self.point_set = PointSet()
+
+        for i in range(10):
+            self.point_set.add_point(Point(float(i), float(i)))
+
+    def test_select_single_point(self):
+        """Test single point selection."""
+        selected = self.engine.select_single_point(
+            self.point_set, (5, 5), tolerance=0.5
+        )
+        self.assertEqual(len(selected), 1)
+
+    def test_select_line(self):
+        """Test line selection."""
+        selected = self.engine.select_line(
+            self.point_set, (0, 0), (10, 10), tolerance=0.5
+        )
+        self.assertGreater(len(selected), 0)
+
+    def test_select_nearest(self):
+        """Test selecting nearest points."""
+        selected = self.engine.select_nearest(
+            self.point_set, (5.1, 5.1), count=1
+        )
+        self.assertEqual(len(selected), 1)
+        self.assertEqual(selected[0], (5.0, 5.0))
+
+    def test_select_farthest(self):
+        """Test selecting farthest points."""
+        selected = self.engine.select_farthest(
+            self.point_set, (0, 0), count=1
+        )
+        self.assertEqual(len(selected), 1)
+        self.assertEqual(selected[0], (9.0, 9.0))
+
+    def test_select_all(self):
+        """Test selecting all points."""
+        selected = self.engine.select_all(self.point_set)
+        self.assertEqual(len(selected), 10)
+
+    def test_selection_history(self):
+        """Test selection save and load."""
+        self.engine.select_all(self.point_set)
+        self.engine.save_selection()
+
+        self.engine.clear_selection()
+        self.assertEqual(self.engine.get_selection_count(), 0)
+
+        self.engine.load_selection()
+        self.assertEqual(self.engine.get_selection_count(), 10)
+
+
+class TestMultidimensionalPaint(unittest.TestCase):
+    """Tests for main MultidimensionalPaint class."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.paint = MultidimensionalPaint()
+
+    def test_add_single_point(self):
+        """Test adding a single point."""
+        self.paint.add_point(1, 2)
+        self.assertEqual(self.paint.get_point_count(), 1)
+
+    def test_add_multiple_dimensions(self):
+        """Test adding points in various dimensions."""
+        self.paint.add_point(1)
+        self.paint.add_point(1, 2)
+        self.paint.add_point(1, 2, 3)
+        self.paint.add_point(1, 2, 3, 4)
+        self.paint.add_point(1, 2, 3, 4, 5)
+
+        self.assertEqual(self.paint.get_point_count(), 5)
+
+    def test_add_points_from_list(self):
+        """Test adding points from list."""
+        points = [(0, 0), (1, 1), (2, 2)]
+        self.paint.add_points_from_list(points)
+        self.assertEqual(self.paint.get_point_count(), 3)
+
+    def test_draw_line(self):
+        """Test drawing a line."""
+        line = self.paint.draw_line((0, 0), (10, 10))
+        self.assertEqual(self.paint.get_shape_count(), 1)
+        self.assertIsInstance(line, Line)
+
+    def test_draw_circle(self):
+        """Test drawing a circle."""
+        circle = self.paint.draw_circle((0, 0), 5)
+        self.assertEqual(self.paint.get_shape_count(), 1)
+        self.assertIsInstance(circle, Circle)
+
+    def test_draw_rectangle(self):
+        """Test drawing a rectangle."""
+        rect = self.paint.draw_rectangle((0, 0), (10, 10))
+        self.assertEqual(self.paint.get_shape_count(), 1)
+        self.assertIsInstance(rect, Rectangle)
+
+    def test_draw_square(self):
+        """Test drawing a square."""
+        square = self.paint.draw_square((5, 5), 10)
+        self.assertEqual(self.paint.get_shape_count(), 1)
+        self.assertIsInstance(square, Square)
+
+    def test_draw_ellipse(self):
+        """Test drawing an ellipse."""
+        ellipse = self.paint.draw_ellipse((0, 0), 10, 5)
+        self.assertEqual(self.paint.get_shape_count(), 1)
+        self.assertIsInstance(ellipse, Ellipse)
+
+    def test_draw_arc(self):
+        """Test drawing an arc."""
+        arc = self.paint.draw_arc((0, 0), 5, 0, math.pi/2)
+        self.assertEqual(self.paint.get_shape_count(), 1)
+        self.assertIsInstance(arc, Arc)
+
+    def test_draw_closed_shape(self):
+        """Test drawing a closed shape."""
+        vertices = [(0, 0), (10, 0), (5, 10)]
+        shape = self.paint.draw_closed_shape(vertices)
+        self.assertEqual(self.paint.get_shape_count(), 1)
+        self.assertIsInstance(shape, ClosedShape)
+
+    def test_select_single_point(self):
+        """Test single point selection."""
+        self.paint.add_point(5, 5)
+        selected = self.paint.select_single_point((5, 5), tolerance=0.5)
+        self.assertEqual(len(selected), 1)
+
+    def test_select_line(self):
+        """Test line selection."""
+        for i in range(10):
+            self.paint.add_point(float(i), float(i))
+
+        selected = self.paint.select_line((0, 0), (10, 10), tolerance=0.5)
+        self.assertGreater(len(selected), 0)
+
+    def test_select_within_region(self):
+        """Test region selection."""
+        self.paint.add_point(2, 2)
+        self.paint.add_point(5, 5)
+        self.paint.add_point(12, 12)
+
+        selected = self.paint.select_within_region((0, 0), (10, 10))
+        self.assertGreaterEqual(len(selected), 2)
+
+    def test_select_nearest(self):
+        """Test nearest point selection."""
+        for i in range(10):
+            self.paint.add_point(float(i), float(i))
+
+        selected = self.paint.select_nearest((5.1, 5.1), count=1)
+        self.assertEqual(len(selected), 1)
+
+    def test_bounding_box(self):
+        """Test bounding box calculation."""
+        self.paint.add_point(1, 2)
+        self.paint.add_point(5, 8)
+
+        bbox = self.paint.get_bounding_box()
+        self.assertEqual(bbox[0], (1, 2))
+        self.assertEqual(bbox[1], (5, 8))
+
+    def test_centroid(self):
+        """Test centroid calculation."""
+        self.paint.add_point(0, 0)
+        self.paint.add_point(2, 2)
+
+        centroid = self.paint.get_centroid()
+        self.assertEqual(centroid.coords, (1.0, 1.0))
+
+    def test_get_statistics(self):
+        """Test statistics calculation."""
+        self.paint.add_point(1, 2)
+        self.paint.draw_circle((0, 0), 5)
+
+        stats = self.paint.get_statistics()
+        self.assertEqual(stats['point_count'], 1)
+        self.assertEqual(stats['shape_count'], 1)
+        self.assertEqual(stats['dimensions'], 2)
+
+    def test_metadata(self):
+        """Test metadata storage."""
+        self.paint.set_metadata("author", "test")
+        self.assertEqual(self.paint.get_metadata("author"), "test")
+
+    def test_export_points(self):
+        """Test point export."""
+        self.paint.add_point(1, 2, label="test")
+        exported = self.paint.export_points()
+        self.assertEqual(len(exported), 1)
+        self.assertEqual(exported[0]['label'], "test")
+
+    def test_export_shapes(self):
+        """Test shape export."""
+        self.paint.draw_circle((0, 0), 5)
+        exported = self.paint.export_shapes()
+        self.assertEqual(len(exported), 1)
+        self.assertEqual(exported[0]['type'], "Circle")
+
+    def test_clear(self):
+        """Test clearing canvas."""
+        self.paint.add_point(1, 2)
+        self.paint.draw_circle((0, 0), 5)
+        self.paint.clear()
+
+        self.assertEqual(self.paint.get_point_count(), 0)
+        self.assertEqual(self.paint.get_shape_count(), 0)
+
+    def test_complex_scenario(self):
+        """Test complex scenario with multiple operations."""
+        # Add multiple points in different dimensions
+        for i in range(5):
+            self.paint.add_point(float(i), float(i))
+
+        for i in range(5, 10):
+            self.paint.add_point(float(i), float(i), float(i))
+
+        # Draw various shapes
+        self.paint.draw_line((0, 0), (5, 5))
+        self.paint.draw_circle((2.5, 2.5), 2)
+        self.paint.draw_rectangle((1, 1), (4, 4))
+
+        # Perform selections
+        nearest = self.paint.select_nearest((5.1, 5.1, 5.1), count=2)
+        self.assertEqual(len(nearest), 2)
+
+        # Get statistics
+        stats = self.paint.get_statistics()
+        self.assertEqual(stats['point_count'], 10)
+        self.assertEqual(stats['shape_count'], 3)
+
+
+class TestEdgeCases(unittest.TestCase):
+    """Tests for edge cases and error handling."""
+
+    def test_zero_radius_circle(self):
+        """Test circle with zero radius."""
+        with self.assertRaises(ValueError):
+            circle = Circle((0, 0), 0)
+
+    def test_duplicate_vertices_in_closed_shape(self):
+        """Test closed shape with duplicate vertices."""
+        vertices = [(0, 0), (10, 0), (10, 10), (0, 0)]
+        shape = ClosedShape(vertices)
+        self.assertIsNotNone(shape)
+
+    def test_very_high_dimensional_point(self):
+        """Test point with many dimensions."""
+        coords = tuple(float(i) for i in range(100))
+        point = Point(*coords)
+        self.assertEqual(point.dimensions, 100)
+
+    def test_selection_on_empty_pointset(self):
+        """Test selection on empty point set."""
+        engine = SelectionEngine()
+        point_set = PointSet()
+
+        selected = engine.select_all(point_set)
+        self.assertEqual(len(selected), 0)
+
+    def test_floating_point_precision(self):
+        """Test floating point precision."""
+        p1 = Point(0.1, 0.2, 0.3)
+        p2 = Point(0.1, 0.2, 0.3)
+        self.assertEqual(p1, p2)
+
+    def test_negative_coordinates(self):
+        """Test points with negative coordinates."""
+        p = Point(-5, -10, -15)
+        self.assertEqual(p.x, -5)
+        self.assertEqual(p.y, -10)
+        self.assertEqual(p.z, -15)
+
+    def test_large_coordinates(self):
+        """Test points with large coordinates."""
+        p = Point(1e6, 1e7, 1e8)
+        self.assertEqual(p.dimensions, 3)
+
+    def test_mixed_int_float(self):
+        """Test point with mixed integer and float coordinates."""
+        p = Point(1, 2.5, 3, 4.75)
+        self.assertEqual(len(p.coords), 4)
+
+
+class TestPerformance(unittest.TestCase):
+    """Performance-related tests."""
+
+    def test_add_many_points(self):
+        """Test adding many points."""
+        paint = MultidimensionalPaint()
+
+        for i in range(1000):
+            paint.add_point(float(i), float(i % 100))
+
+        self.assertEqual(paint.get_point_count(), 1000)
+
+    def test_select_from_many_points(self):
+        """Test selection with many points."""
+        paint = MultidimensionalPaint()
+
+        for i in range(100):
+            paint.add_point(float(i), float(i))
+
+        selected = paint.select_within_region((0, 0), (50, 50))
+        self.assertGreater(len(selected), 0)
+
+    def test_many_shapes(self):
+        """Test with many shapes."""
+        paint = MultidimensionalPaint()
+
+        for i in range(50):
+            paint.draw_circle((float(i), float(i)), 5)
+
+        self.assertEqual(paint.get_shape_count(), 50)
+
+
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
