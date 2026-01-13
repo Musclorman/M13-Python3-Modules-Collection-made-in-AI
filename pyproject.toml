@@ -3,9 +3,9 @@ requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "variableplus"
-version = "1.0.0"
-description = "Complete Python package collection: n-ary trees, menus, arrays, geometry"
+name = "M13 Python3 Modules Collection mad in AI"
+version = "0.0.1"
+description = "Collection of python3 modules made by AI assistant. Currently: varplus"
 readme = "README.md"
 requires-python = ">=3.7"
 license = {text = "MIT"}
@@ -24,10 +24,10 @@ keywords = [
     "shapes",
     "algorithm",
     "collection",
-    "package",
+    "package", "2d", "3d", "collection"
 ]
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
+    "Development Status :: 2 - Beta",
     "Intended Audience :: Developers",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Utilities",
@@ -46,15 +46,14 @@ classifiers = [
     "Natural Language :: Spanish",
     "Natural Language :: German",
     "Natural Language :: Italian",
-    "Natural Language :: Chinese (Simplified)",
 ]
 
 [project.urls]
 Homepage = "https://github.com/Musclor13/variableplus"
 Documentation = "https://github.com/Musclor13/variableplus/wiki"
-Repository = "https://github.com/Musclor13/variableplus.git"
-"Bug Tracker" = "https://github.com/Musclor13/variableplus/issues"
-Changelog = "https://github.com/Musclor13/variableplus/releases"
+Repository = "https://github.com/Musclorman/M13-Python3-Modules-Collection-made-in-AI/.git"
+"Bug Tracker" = "https://github.com/Musclorman/M13-Python3-Modules-Collection-made-in-AI/issues"
+Changelog = "https://github.comMusclorman/M13-Python3-Modules-Collection-made-in-AI//releases"
 
 [tool.setuptools]
 packages = ["generic_tree", "MenuMaker", "Multidimention_table"]
