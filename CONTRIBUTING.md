@@ -1,38 +1,36 @@
-# Contributing to Generic Tree
+# Contributing to M13 Python Modules Collection
 
-Thank you for your interest in contributing to Generic Tree! This document provides guidelines and instructions for contributing.
+Thank you for your interest in contributing to the M13 Python Modules Collection! This document provides guidelines and instructions for contributing to any of the modules in this collection.
 
 ## Code of Conduct
 
 Be respectful and constructive. All contributors are expected to maintain a professional and inclusive environment.
+
+## Repository Structure
+
+```
+M13-Python3-Modules-Collection-made-in-AI/
+├── VariableExtender/
+│   ├── generic_tree/          # N-ary tree implementation
+│   ├── MenuMaker/             # Menu system
+│   ├── Multidimention_table/  # Multidimensional arrays
+│   └── multidimention_paint/  # N-dimensional geometry
+└── Utilities/
+    └── PydocsExport/          # Documentation exporter
+```
 
 ## Reporting Bugs
 
 When reporting bugs, please include:
 
 - **Title**: Clear, descriptive title
+- **Module**: Which module has the bug
 - **Environment**: Python version, OS, package version
 - **Steps to Reproduce**: Detailed steps to reproduce the issue
 - **Expected Behavior**: What should happen
 - **Actual Behavior**: What actually happens
 - **Code Example**: Minimal code that demonstrates the bug
 - **Traceback**: Full error traceback if applicable
-
-Example:
-```
-Title: Tree.traverse() fails with empty tree
-
-Python: 3.9
-OS: Windows 10
-Package: generic-tree 1.0.0
-
-Steps:
-1. Create empty tree
-2. Call traverse()
-
-Expected: Returns empty iterator
-Actual: Raises AttributeError
-```
 
 ## Suggesting Enhancements
 
@@ -46,8 +44,227 @@ When suggesting enhancements:
 
 ## Development Setup
 
-1. Clone the repository
+1. Clone the repository:
+```bash
+git clone https://github.com/Musclorman/M13-Python3-Modules-Collection-made-in-AI
+cd M13-Python3-Modules-Collection-made-in-AI
+```
+
 2. Create a virtual environment:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+3. Install development dependencies:
+```bash
+pip install -e ".[dev]"
+pip install pytest pytest-cov black isort mypy
+```
+
+## Making Changes
+
+1. Create a new branch for your feature:
+```bash
+git checkout -b feature/your-feature-name
+```
+
+2. Make your changes:
+   - Follow PEP 8 style guidelines
+   - Add docstrings to functions and classes
+   - Keep functions focused and small
+   - Use type hints where possible
+
+3. Write tests for your changes:
+```bash
+pytest tests/
+```
+
+4. Format your code:
+```bash
+black .
+isort .
+```
+
+5. Run type checking:
+```bash
+mypy VariableExtender/ Utilities/
+```
+
+## Commit Guidelines
+
+- Use clear, descriptive commit messages
+- Reference issues in commits: "Fix #123"
+- Start with a verb: "Add", "Fix", "Update", "Remove"
+- Keep commits focused on a single change
+
+Example:
+```
+Add Portuguese documentation for generic_tree module
+
+- Add README_PT.md
+- Update MULTILINGUAL_DOCUMENTATION.md
+- Fixes #45
+```
+
+## Testing
+
+Before submitting a pull request, ensure:
+
+1. All tests pass:
+```bash
+pytest
+```
+
+2. Code coverage is adequate:
+```bash
+pytest --cov=VariableExtender --cov=Utilities
+```
+
+3. No style issues:
+```bash
+black --check .
+isort --check-only .
+```
+
+## Pull Request Process
+
+1. Update documentation if needed
+2. Add tests for new features
+3. Update CHANGELOG.md
+4. Ensure all tests pass
+5. Create a descriptive pull request
+
+Pull Request template:
+
+```markdown
+## Description
+Brief description of changes
+
+## Related Issues
+Closes #123
+
+## Type of Change
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Documentation update
+- [ ] Performance improvement
+
+## Testing
+Describe how you tested your changes
+
+## Checklist
+- [ ] Tests added/updated
+- [ ] Documentation updated
+- [ ] CHANGELOG.md updated
+- [ ] Code formatted (black, isort)
+- [ ] Type hints added
+- [ ] All tests pass
+```
+
+## Documentation
+
+When adding new features:
+
+1. Add docstrings following Google style:
+```python
+def function(param1: str, param2: int) -> bool:
+    \"\"\"Short description.
+    
+    Longer description if needed.
+    
+    Args:
+        param1: Description of param1
+        param2: Description of param2
+        
+    Returns:
+        Description of return value
+        
+    Raises:
+        ValueError: When param1 is empty
+    \"\"\"
+```
+
+2. Update module README.md files
+3. Add examples to example.py files
+4. Update multilingual documentation (if applicable)
+
+## All Languages
+
+Documentation and code should support:
+- English (primary)
+- French (Français)
+- Spanish (Español)
+- German (Deutsch)
+- Italian (Italiano)
+- Portuguese (Português)
+
+## AI Generation Disclosure
+
+This project was developed with AI assistance. When contributing:
+
+1. Clearly indicate if code was generated or enhanced by AI
+2. Review AI-generated code for correctness and style
+3. Add the "Generated by AI" header to new files
+4. Ensure all code passes tests and style checks
+
+## Code Style
+
+Follow these standards:
+
+- **Python Version**: 3.7+
+- **Style**: PEP 8 (enforced by black)
+- **Import Order**: isort configuration
+- **Type Hints**: Required for public APIs
+- **Docstrings**: Google style
+- **Line Length**: 100 characters (black default)
+
+## Naming Conventions
+
+- **Functions**: lowercase_with_underscores
+- **Classes**: PascalCase
+- **Constants**: UPPERCASE_WITH_UNDERSCORES
+- **Private**: _leading_underscore
+- **Variables**: lowercase_with_underscores
+
+## Comments
+
+- Keep comments brief and meaningful
+- Explain the "why", not the "what"
+- Update comments when code changes
+- Use English for all comments
+
+## Licensing
+
+By contributing, you agree that:
+
+1. Your contributions will be licensed under the same MIT license
+2. You have rights to the code you contribute
+3. You understand the license terms
+
+## Questions?
+
+If you have questions:
+
+1. Check existing issues and pull requests
+2. Read the module documentation
+3. Open a discussion or issue
+4. Contact the maintainers
+
+## Recognition
+
+Contributors will be:
+- Listed in CHANGELOG.md
+- Added to contributors file
+- Credited in release notes
+
+## License
+
+MIT License - See LICENSE file for details
+
+---
+
+**Thank you for contributing to M13 Python Modules Collection!**
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
